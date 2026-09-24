@@ -34,7 +34,11 @@ jobs:
       # committed rather than generated, because generating them needs Electron and a display.
       - run: node build-web.js
 
+      # enablement turns the Pages site on for the repo, so this does not need a visit to
+      # Settings > Pages before the first deploy
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist-web
