@@ -104,3 +104,38 @@ function speak(text, opts = {}) {
 }
 
 const bar = (pct, cls = '') => `<div class="bar ${cls}"><span style="width:${Math.max(0, Math.min(100, pct))}%"></span></div>`;
+
+// ---- dialogs ----
+// window.prompt and window.confirm are blocked in Electron's sandbox and look foreign in the
+// browser, so the app carries its own.
+const Dialog = {
+  close() {
+    $('#modal')?.remove();
+  },
+  open(html) {
+    this.close();
+    document.body.insertAdjacentHTML(
+      'beforeend',
+      `<div id="modal" class="modal-back"><div class="card modal-card">${html}</div></div>`,
+    );
+    $('#modal').addEventListener('click', (e) => e.target.id === 'modal' && this.close());
+  },
+  prompt(title, note, label, value, onOk) {
+    this.open(`<h2>${esc(title)}</h2>${note ? `<p class="small muted">${esc(note)}</p>` : ''}
+      <label class="f">${esc(label)}</label><input type="text" id="dlg-input" value="${esc(value)}" maxlength="24">
+      <div class="row" style="margin-top:18px;justify-content:flex-end"><button class="btn" id="dlg-no">Vazgeç</button><button class="btn primary" id="dlg-yes">Tamam</button></div>`);
+    const input = $('#dlg-input');
+    input.focus();
+    input.select();
+    const ok = () => { const v = input.value; this.close(); onOk(v); };
+    $('#dlg-yes').onclick = ok;
+    $('#dlg-no').onclick = () => this.close();
+    input.addEventListener('keydown', (e) => e.key === 'Enter' && ok());
+  },
+  confirm(title, note, okLabel, onOk) {
+    this.open(`<h2>${esc(title)}</h2><p class="small muted">${esc(note)}</p>
+      <div class="row" style="margin-top:18px;justify-content:flex-end"><button class="btn" id="dlg-no">Vazgeç</button><button class="btn danger" id="dlg-yes">${esc(okLabel)}</button></div>`);
+    $('#dlg-yes').onclick = () => { this.close(); onOk(); };
+    $('#dlg-no').onclick = () => this.close();
+  },
+};

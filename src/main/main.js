@@ -3,24 +3,45 @@ const path = require('node:path');
 const fs = require('node:fs');
 const api = require('./api');
 const tts = require('./tts');
+const updater = require('./updater');
 
 const isDev = process.argv.includes('--dev');
-const stateFile = () => path.join(app.getPath('userData'), 'lingotask.json');
 
-function readState() {
+// One file per profile, plus a small index. Keeping them separate means a save only rewrites the
+// profile being studied, and one corrupted file cannot take the others down with it.
+const dir = () => app.getPath('userData');
+const indexFile = () => path.join(dir(), 'profiles.json');
+const stateFile = (id) => path.join(dir(), `state-${id}.json`);
+const LEGACY = () => path.join(dir(), 'lingotask.json');
+
+function readJson(file) {
   try {
-    return JSON.parse(fs.readFileSync(stateFile(), 'utf8'));
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
   } catch {
     return null;
   }
 }
 
 // atomic write: a crash mid-save never corrupts the user's progress
-function writeState(state) {
-  const file = stateFile();
+function writeJson(file, data) {
   const tmp = `${file}.tmp`;
-  fs.writeFileSync(tmp, JSON.stringify(state));
+  fs.writeFileSync(tmp, JSON.stringify(data));
   fs.renameSync(tmp, file);
+}
+
+// Single-profile installs predate this; move their save into the new layout on first launch.
+function readIndex() {
+  const existing = readJson(indexFile());
+  if (existing) return existing;
+
+  const legacy = readJson(LEGACY());
+  const index = { active: 'p1', list: [{ id: 'p1', name: 'Ben', created: new Date().toISOString().slice(0, 10) }] };
+  if (legacy) {
+    writeJson(stateFile('p1'), legacy);
+    fs.renameSync(LEGACY(), `${LEGACY()}.migrated`);
+  }
+  writeJson(indexFile(), index);
+  return index;
 }
 
 function createWindow() {
@@ -44,6 +65,7 @@ function createWindow() {
   // minimal one; elsewhere the menu bar is just noise for a single-window app.
   if (!isDev) Menu.setApplicationMenu(process.platform === 'darwin' ? Menu.buildFromTemplate([{ role: 'appMenu' }, { role: 'editMenu' }, { role: 'windowMenu' }]) : null);
   win.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
+  updater.start(win);
   if (isDev) win.webContents.openDevTools({ mode: 'detach' });
 }
 
@@ -55,12 +77,23 @@ app.whenReady().then(() => {
 
   tts.init(path.join(app.getPath('userData'), 'tts-cache'));
 
-  ipcMain.handle('state:load', () => readState());
-  ipcMain.handle('state:save', (_e, state) => {
-    writeState(state);
+  ipcMain.handle('profiles:load', () => readIndex());
+  ipcMain.handle('profiles:save', (_e, index) => {
+    writeJson(indexFile(), index);
+    return true;
+  });
+  ipcMain.handle('state:load', (_e, id) => readJson(stateFile(id)));
+  ipcMain.handle('state:save', (_e, id, state) => {
+    writeJson(stateFile(id), state);
+    return true;
+  });
+  ipcMain.handle('state:delete', (_e, id) => {
+    fs.rmSync(stateFile(id), { force: true });
     return true;
   });
   ipcMain.handle('api', (_e, name, args) => api.call(name, args));
+  ipcMain.handle('update:install', () => updater.install());
+  ipcMain.handle('app:version', () => app.getVersion());
 
   createWindow();
   app.on('activate', () => BrowserWindow.getAllWindows().length === 0 && createWindow());

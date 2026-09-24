@@ -30,7 +30,10 @@ const Platform = (() => {
     },
     get: (k) => idb.run('readonly', (s) => s.get(k)),
     set: (k, v) => idb.run('readwrite', (s) => s.put(v, k)),
+    del: (k) => idb.run('readwrite', (s) => s.delete(k)),
   };
+
+  const newIndex = () => ({ active: 'p1', list: [{ id: 'p1', name: 'Ben', created: new Date().toISOString().slice(0, 10) }] });
 
   // ---- web speech ----
   // Voices arrive asynchronously and the first getVoices() is usually empty; wait for them once.
@@ -79,15 +82,40 @@ const Platform = (() => {
 
   const web = {
     kind: 'web',
-    async loadState() {
+    async loadProfiles() {
       try {
-        return (await idb.get('state')) || null;
+        const existing = await idb.get('profiles');
+        if (existing) return existing;
+        // installs that predate profiles keep their save under the old key
+        const legacy = await idb.get('state');
+        const index = newIndex();
+        if (legacy) {
+          await idb.set('state:p1', legacy);
+          await idb.del('state');
+        }
+        await idb.set('profiles', index);
+        return index;
+      } catch {
+        return newIndex();
+      }
+    },
+    async saveProfiles(index) {
+      await idb.set('profiles', index);
+      return true;
+    },
+    async loadState(id) {
+      try {
+        return (await idb.get(`state:${id}`)) || null;
       } catch {
         return null;
       }
     },
-    async saveState(state) {
-      await idb.set('state', state);
+    async saveState(id, state) {
+      await idb.set(`state:${id}`, state);
+      return true;
+    },
+    async deleteState(id) {
+      await idb.del(`state:${id}`);
       return true;
     },
     async api(name, ...args) {
@@ -109,8 +137,11 @@ const Platform = (() => {
     // Windows synthesises in the main process (SAPI); elsewhere there is no SAPI and the browser
     // engine is the right answer, so the whole speech path falls back to it.
     nativeSpeech: true,
-    loadState: () => window.lingo.loadState(),
-    saveState: (s) => window.lingo.saveState(s),
+    loadProfiles: () => window.lingo.loadProfiles(),
+    saveProfiles: (index) => window.lingo.saveProfiles(index),
+    loadState: (id) => window.lingo.loadState(id),
+    saveState: (id, s) => window.lingo.saveState(id, s),
+    deleteState: (id) => window.lingo.deleteState(id),
     async api(name, ...args) {
       if (name === 'voices' && !this.nativeSpeech) return browserVoices();
       const r = await window.lingo.api(name, ...args);

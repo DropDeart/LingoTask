@@ -27,18 +27,115 @@ const App = {
   current: null,
   params: {},
 
+  profiles: null, // { active, list: [{ id, name, created }] }
+
   async init() {
     Api.init();
     Api.onChange(() => this.renderFoot());
-    const saved = await Platform.loadState();
-    this.state = this.migrate(saved);
-    if (!saved) this.saveNow();
+    this.profiles = await Platform.loadProfiles();
+    await this.loadActive();
     $('#nav').innerHTML = NAV.map(([id, label, icon, short]) => `<button data-nav="${id}"><i>${icon}</i><span class="full">${label}</span><span class="short">${short}</span></button>`).join('');
     $('#nav').addEventListener('click', (e) => {
       const b = e.target.closest('[data-nav]');
       if (b) this.go(b.dataset.nav);
     });
+    $('#brand').onclick = () => this.openProfileMenu();
+    this.renderProfile();
     this.go('dashboard');
+  },
+
+  // ---- profiles ----
+  // Each profile is an independent learner: its own exam date, vocabulary, plan and progress.
+  // Nothing is shared, so two people on one computer never overwrite each other.
+  profile() {
+    return this.profiles.list.find((p) => p.id === this.profiles.active) || this.profiles.list[0];
+  },
+  async loadActive() {
+    const saved = await Platform.loadState(this.profiles.active);
+    this.state = this.migrate(saved);
+    if (!saved) await this.saveNow();
+  },
+  async switchProfile(id) {
+    if (id === this.profiles.active) return;
+    await this.saveNow(); // flush any debounced edit before swapping the state out
+    this.profiles.active = id;
+    await Platform.saveProfiles(this.profiles);
+    await this.loadActive();
+    this.resetViews();
+    this.go('dashboard');
+    this.toast(`${this.profile().name} profiline geçildi`);
+  },
+  async createProfile(name) {
+    const id = `p${Date.now().toString(36)}`;
+    this.profiles.list.push({ id, name: name.trim().slice(0, 24), created: today() });
+    this.profiles.active = id;
+    await Platform.saveProfiles(this.profiles);
+    this.state = this.migrate(null);
+    await this.saveNow();
+    this.resetViews();
+    this.go('dashboard');
+    this.toast(`“${name}” profili oluşturuldu`);
+  },
+  async renameProfile(id, name) {
+    const p = this.profiles.list.find((x) => x.id === id);
+    if (!p || !name.trim()) return;
+    p.name = name.trim().slice(0, 24);
+    await Platform.saveProfiles(this.profiles);
+  },
+  async deleteProfile(id) {
+    if (this.profiles.list.length < 2) return; // never leave the app with no profile
+    this.profiles.list = this.profiles.list.filter((p) => p.id !== id);
+    await Platform.deleteState(id);
+    if (this.profiles.active === id) {
+      this.profiles.active = this.profiles.list[0].id;
+      await Platform.saveProfiles(this.profiles);
+      await this.loadActive();
+      this.resetViews();
+      this.go('dashboard');
+    } else await Platform.saveProfiles(this.profiles);
+  },
+  // The switcher lives on the brand so it is reachable from every view. On the phone the brand is
+  // hidden, so Settings carries the same controls.
+  renderProfile() {
+    const el = $('#brand-profile');
+    if (el) el.textContent = this.profile().name;
+  },
+  openProfileMenu() {
+    $('#pmenu')?.remove();
+    const rows = this.profiles.list
+      .map((p) => `<button class="pmenu-row ${p.id === this.profiles.active ? 'on' : ''}" data-switch="${p.id}">
+        <span>${esc(p.name)}</span>${p.id === this.profiles.active ? '<span class="tick">✓</span>' : ''}</button>`)
+      .join('');
+    document.body.insertAdjacentHTML(
+      'beforeend',
+      `<div id="pmenu-back" style="position:fixed;inset:0;z-index:6"></div>
+       <div id="pmenu"><div class="pmenu-head">Profiller</div>${rows}
+         <button class="pmenu-row add" id="pnew">+ Yeni profil</button>
+         <button class="pmenu-row add" id="pmanage">Profilleri yönet…</button></div>`,
+    );
+    const close = () => { $('#pmenu')?.remove(); $('#pmenu-back')?.remove(); };
+    $('#pmenu-back').onclick = close;
+    $$('[data-switch]').forEach((b) => (b.onclick = () => { close(); this.switchProfile(b.dataset.switch); }));
+    $('#pnew').onclick = () => { close(); this.promptNewProfile(); };
+    $('#pmanage').onclick = () => { close(); Views.dashboard.settings(); };
+  },
+  promptNewProfile() {
+    Dialog.prompt('Yeni profil', 'Bu profil sıfırdan başlar: kendi sınav tarihi, kelimeleri ve ilerlemesi olur.', 'İsim', '', (name) => {
+      if (name.trim()) this.createProfile(name);
+    });
+  },
+
+  // Views hold per-session state (open topic, draft essay, running quiz) that belongs to the
+  // profile that was active; clear it so nothing leaks across a switch.
+  resetViews() {
+    Audio$.stop();
+    Object.assign(Views.vocab, { tab: 'learn', session: null, learnQueue: null, filter: 'all' });
+    Object.assign(Views.dictionary, { tab: 'search', last: null });
+    Object.assign(Views.grammar, { topic: null, phase: 'lesson', answers: {}, checkpoint: null });
+    Object.assign(Views.writing, { tab: 'write', draft: '', analysis: null, checkpoint: null, openId: null, revising: null, timerSec: 0, offset: 0 });
+    Views.speaking.reset();
+    Views.speaking.checkpoint = null;
+    Object.assign(Views.tests, { active: null, checkpoint: null });
   },
 
   migrate(s) {
@@ -47,7 +144,9 @@ const App = {
     if (!s.settings.startDate) s.settings.startDate = today();
     // add new core words without touching progress on existing ones
     const have = new Map((s.vocab || []).map((v) => [v.id, v]));
-    s.vocab = [...(s.vocab || []), ...CORE_VOCAB.filter((v) => !have.has(v.id))];
+    // Copy each entry: CORE_VOCAB is a module-level array, so handing out the objects themselves
+    // would let one profile's progress (learned, box, right/wrong) show up in the next.
+    s.vocab = [...(s.vocab || []), ...CORE_VOCAB.filter((v) => !have.has(v.id)).map((v) => ({ ...v }))];
     s.vocab.forEach((v) => {
       if (v.academic === undefined) v.academic = isAcademic(v.en);
       if (v.spell === undefined) v.spell = 0;
@@ -85,7 +184,7 @@ const App = {
   },
 
   saveNow() {
-    return Platform.saveState(this.state);
+    return Platform.saveState(this.profiles.active, this.state);
   },
   save: debounce(() => App.saveNow(), 400),
 
@@ -109,6 +208,7 @@ const App = {
   renderFoot() {
     const days = daysBetween(today(), this.state.settings.examDate);
     const net = Api.statusLabel();
+    this.renderProfile();
     $('#side-foot').innerHTML = `<div class="count"><b>${Math.max(days, 0)}</b><span>gün kaldı</span></div>
       <small>Sınav: ${fmtDate(this.state.settings.examDate)}</small>
       <button class="netpill ${net.cls}" id="netpill" title="Çevrimdışı modu aç / kapat"><span class="ic">${net.icon}</span><span class="txt">${net.text}</span></button>`;
@@ -278,5 +378,34 @@ const App = {
   addResult(skill, band, extra = {}) {
     this.state.results.push({ id: Date.now(), skill, band, date: today(), ...extra });
     this.save();
+  },
+};
+
+// Update banner. Only the desktop build reports anything; the phone version updates itself
+// through the service worker, which needs no prompt.
+const Updater = {
+  init() {
+    if (!window.lingo?.onUpdate) return;
+    window.lingo.onUpdate((msg) => this.show(msg));
+  },
+  show(msg) {
+    if (msg.state === 'error') return; // silent: no release yet, offline, or rate-limited
+    $('#update-bar')?.remove();
+    if (msg.state === 'downloading') {
+      const pct = msg.percent != null ? ` %${msg.percent}` : '';
+      document.body.insertAdjacentHTML('beforeend', `<div id="update-bar" class="updbar"><span>Yeni sürüm indiriliyor${pct}…</span></div>`);
+      return;
+    }
+    if (msg.state !== 'ready') return;
+    document.body.insertAdjacentHTML(
+      'beforeend',
+      `<div id="update-bar" class="updbar ready">
+        <span><b>Sürüm ${esc(msg.version)}</b> hazır. Yeniden başlatınca kurulacak.</span>
+        <button class="btn sm primary" id="upd-now">Şimdi yeniden başlat</button>
+        <button class="btn sm ghost" id="upd-later">Sonra</button>
+      </div>`,
+    );
+    $('#upd-now').onclick = () => window.lingo.installUpdate();
+    $('#upd-later').onclick = () => $('#update-bar').remove();
   },
 };

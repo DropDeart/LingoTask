@@ -20,15 +20,21 @@ jobs:
         include:
           - os: windows-latest
             target: dist:win
-            artifacts: 'dist/*.exe'
+            artifacts: |
+              dist/*.exe
+              dist/*.blockmap
+              dist/latest.yml
           - os: macos-latest
             target: dist:mac
-            artifacts: 'dist/*.dmg'
+            artifacts: |
+              dist/*.dmg
+              dist/latest-mac.yml
           - os: ubuntu-latest
             target: dist:linux
             artifacts: |
               dist/*.AppImage
               dist/*.deb
+              dist/latest-linux.yml
 
     runs-on: ${{ matrix.os }}
     steps:

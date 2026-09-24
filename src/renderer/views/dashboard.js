@@ -29,7 +29,7 @@ Views.dashboard = {
     const vs = App.vocabStats();
 
     return `<div class="page">
-      <div class="page-head"><div><h1>Merhaba 👋</h1><p class="sub">Hedef: IELTS ${fmtBand(s.settings.target)} · Sınav ${fmtDate(s.settings.examDate)}</p></div>
+      <div class="page-head"><div><h1>Merhaba, ${esc(App.profile().name)} 👋</h1><p class="sub">Hedef: IELTS ${fmtBand(s.settings.target)} · Sınav ${fmtDate(s.settings.examDate)}</p></div>
         <button class="btn" data-act="settings">Ayarlar</button></div>
 
       <div class="grid g4">
@@ -93,6 +93,11 @@ Views.dashboard = {
       `<div id="dlg" style="position:fixed;inset:0;background:rgba(15,30,55,.45);display:grid;place-items:center;z-index:5">
         <div class="card" style="width:460px;margin:0;max-height:88vh;overflow-y:auto">
           <h2>Ayarlar</h2>
+          <h3 style="margin-top:0">Profiller</h3>
+          <div class="small muted" style="margin-bottom:6px">Her profilin kendi sınav tarihi, kelimeleri ve ilerlemesi olur. Aralarında hiçbir şey paylaşılmaz.</div>
+          <div id="s-profiles"></div>
+          <button class="btn sm" id="s-pnew" style="margin-top:8px">+ Yeni profil</button>
+          <h3>Bu profilin ayarları</h3>
           <label class="f">Sınav tarihi</label><input type="date" id="s-exam" value="${s.examDate}">
           <label class="f" style="margin-top:12px">Hedef band</label><input type="number" id="s-target" min="4" max="9" step="0.5" value="${s.target}">
           <label class="f" style="margin-top:12px">Günlük yeni kelime</label><input type="number" id="s-new" min="1" max="30" value="${s.dailyNew}">
@@ -112,6 +117,42 @@ Views.dashboard = {
           <div class="row" style="margin-top:18px;justify-content:flex-end"><button class="btn" id="s-cancel">Vazgeç</button><button class="btn primary" id="s-save">Kaydet</button></div>
         </div></div>`,
     );
+    const drawProfiles = () => {
+      const { active, list } = App.profiles;
+      $('#s-profiles').innerHTML = list
+        .map((p) => `<div class="prow">
+          <span class="nm">${esc(p.name)}${p.id === active ? ' <span class="me">· şu an</span>' : ''}</span>
+          ${p.id === active ? '' : `<button class="btn sm" data-use="${p.id}">Geç</button>`}
+          <button class="btn ghost sm" data-ren="${p.id}">Adını değiştir</button>
+          ${list.length > 1 ? `<button class="btn ghost sm" data-del="${p.id}">Sil</button>` : ''}
+        </div>`)
+        .join('');
+      $$('[data-use]', $('#s-profiles')).forEach((b) => (b.onclick = () => { $('#dlg').remove(); App.switchProfile(b.dataset.use); }));
+      $$('[data-ren]', $('#s-profiles')).forEach((b) => (b.onclick = () => {
+        const p = list.find((x) => x.id === b.dataset.ren);
+        Dialog.prompt('Profil adı', '', 'İsim', p.name, async (name) => {
+          await App.renameProfile(p.id, name);
+          drawProfiles();
+          App.renderProfile();
+          if (p.id === active) App.render();
+        });
+      }));
+      $$('[data-del]', $('#s-profiles')).forEach((b) => (b.onclick = () => {
+        const p = list.find((x) => x.id === b.dataset.del);
+        Dialog.confirm(`“${p.name}” silinsin mi?`, 'Bu profilin kelimeleri, yazıları ve tüm ilerlemesi kalıcı olarak silinir. Geri alınamaz.', 'Sil', async () => {
+          const wasActive = p.id === App.profiles.active;
+          await App.deleteProfile(p.id);
+          if (wasActive) return; // deleteProfile already re-rendered onto another profile
+          drawProfiles();
+        });
+      }));
+    };
+    drawProfiles();
+    $('#s-pnew').onclick = () => {
+      $('#dlg').remove();
+      App.promptNewProfile();
+    };
+
     $('#s-cancel').onclick = () => { Audio$.stop(); $('#dlg').remove(); };
     $('#s-save').onclick = () => {
       s.examDate = $('#s-exam').value || s.examDate;

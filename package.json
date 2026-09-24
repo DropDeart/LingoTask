@@ -112,6 +112,16 @@
     },
     "asarUnpack": [
       "src/main/tts.ps1"
+    ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "DropDeart",
+        "repo": "LingoTask"
+      }
     ]
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9"
   }
 }

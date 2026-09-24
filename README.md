@@ -33,6 +33,29 @@ git tag v1.0.0 && git push origin v1.0.0
 
 Derlemeler imzasız: Windows SmartScreen'de **Daha fazla bilgi → Yine de çalıştır**, macOS'ta **sağ tık → Aç** gerekir. İmzalamak Apple Developer üyeliği ve Windows kod imzalama sertifikası ister.
 
+### Otomatik güncelleme
+
+Kurulu uygulama GitHub Releases'i kendisi kontrol eder: açılıştan 4 saniye sonra ve ardından 6 saatte bir. Yeni sürüm varsa arka planda indirir, bittiğinde alt köşede "Sürüm X hazır" çubuğu çıkar. **Kurulum ancak sen onaylayınca yapılır** — uygulama yazma çalışmasının ortasında kendini yeniden başlatmaz.
+
+Güncelleme yayınlamak için sürüm numarasını yükseltip etiket at:
+
+```bash
+npm version patch          # package.json + git tag
+git push --follow-tags
+```
+
+CI üç platformda derler, `latest.yml` dosyalarını da Release'e koyar (`electron-updater` yeni sürümü bu dosyadan anlar) ve kurulu uygulamalar bir sonraki kontrolde yakalar.
+
+| Hedef | Otomatik güncelleme |
+|---|---|
+| Windows (Setup) | ✅ |
+| Windows (Portable) | ❌ — değiştirilecek kurulum yok, elle indirilir |
+| Linux (AppImage) | ✅ |
+| macOS | ❌ — imzalı ve notarize edilmiş derleme şart; imzasız uygulama kendini güncelleyemez |
+| Telefon (PWA) | ✅ — service worker halleder, onay gerekmez |
+
+macOS'ta kontrol tamamen atlanıyor, her açılışta hata göstermek yerine sessiz kalıyor.
+
 ### Platform farkları
 
 Seslendirme dışında her şey üç sistemde aynı. Ses Windows'ta ana süreçte SAPI ile üretilir; macOS ve Linux'ta SAPI olmadığı için tarayıcı motoruna düşer — o platformlarda Chromium işletim sistemiyle düzgün konuşur, Windows'ta konuşamadığı için bu ayrım var. Linux'ta ses için `speech-dispatcher` kurulu olmalıdır.
@@ -80,11 +103,12 @@ src/
     api.js       shared/net + seslendirme, IPC yüzeyi
     tts.js       Windows SAPI seslendirme + disk cache
     tts.ps1      seslendirmeyi yapan PowerShell script'i
+    updater.js   GitHub Releases üzerinden kendini güncelleme
   renderer/    arayüz — bağımlılıksız vanilla JS
     platform.js  platforma özgü HER ŞEY burada (depolama, ağ, ses)
     api.js       çevrimdışı farkındalıklı API katmanı: önbellek, algılama, birleştirme
     offline-check.js  ağsız gramer + yazım denetleyicisi
-    app.js       durum, kalıcılık, yönlendirme, plan/ilerleme, metrikler
+    app.js       durum, profiller, kalıcılık, yönlendirme, plan/ilerleme, metrikler
     util.js      tarih, metin karşılaştırma (Türkçe duyarlı), ses, band yardımcıları
     data/        kelime listesi, AWL, gramer konuları, topic'ler, testler, yazım sözlüğü
     views/       her sekme için bir dosya
@@ -97,11 +121,19 @@ serve-web.js   kurulum için statik sunucu
 
 | | masaüstü | telefon |
 |---|---|---|
-| Depolama | JSON dosyası (atomik: tmp + rename) | IndexedDB |
+| Depolama | profil başına JSON dosyası (atomik: tmp + rename) | IndexedDB, profil başına anahtar |
 | Ağ | ana süreç (renderer CSP'si `connect-src 'none'`) | doğrudan sayfadan — dört API de CORS'a açık |
 | Ses | Windows SAPI | cihazın kendi TTS motoru |
 
 Veri masaüstünde `%APPDATA%\LingoTask\lingotask.json` içinde tutulur; geçici dosya + rename ile atomik yazılır, böylece çökme durumunda ilerleme bozulmaz.
+
+## Profiller
+
+Uygulamada hesap ya da sunucu yok, ama bir cihazı birden fazla kişi kullanabilir. Sol üstteki logoya tıklayınca profil menüsü açılır; telefonda logo gizli olduğu için aynı kontroller **Ayarlar → Profiller** altında.
+
+Her profilin kendi sınav tarihi, hedef bandı, kelimeleri, yazıları, gramer sonuçları ve çalışma planı olur. Aralarında hiçbir şey paylaşılmaz — plan bile o profilin *kendi* ilk açılış gününden kendi sınav tarihine göre bölünür.
+
+Depolama: masaüstünde profil başına ayrı dosya (`profiles.json` + `state-<id>.json`), telefonda IndexedDB'de ayrı anahtar. Ayrı dosya olması iki işe yarıyor — kaydetme yalnızca çalışılan profili yeniden yazar, ve bozulan bir dosya diğerlerini götürmez. Tek profilli eski kurulumlar ilk açılışta sessizce yeni düzene taşınır.
 
 ## Çevrimdışı mod
 

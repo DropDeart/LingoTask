@@ -162,3 +162,37 @@ th { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: v
 .netpill:hover { background: rgba(255,255,255,.22); }
 .local-note { display: inline-block; margin-left: 8px; font-size: 12px; color: var(--amber); }
 #nav button .short { display: none; }
+
+/* profile switcher on the brand */
+.brand { width: 100%; border: 0; background: none; cursor: pointer; text-align: left; border-radius: 9px; padding: 6px 8px 16px; position: relative; }
+.brand:hover { background: var(--navy-2); }
+.brand-caret { position: absolute; right: 10px; top: 16px; color: #9db4d8; font-size: 11px; }
+#pmenu { position: fixed; top: 60px; left: 12px; width: 210px; background: #fff; border: 1px solid var(--line);
+  border-radius: 10px; box-shadow: 0 8px 28px rgba(15,30,55,.22); padding: 5px; z-index: 7; }
+.pmenu-head { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); padding: 7px 10px 4px; }
+.pmenu-row { display: flex; justify-content: space-between; align-items: center; width: 100%; border: 0;
+  background: none; padding: 9px 10px; border-radius: 7px; cursor: pointer; text-align: left; }
+.pmenu-row:hover { background: var(--blue-soft); }
+.pmenu-row.on { font-weight: 600; color: var(--blue); }
+.pmenu-row.add { color: var(--blue); border-top: 1px solid var(--line); border-radius: 0; margin-top: 4px; }
+.pmenu-row.add:last-child { border-radius: 0 0 7px 7px; }
+.pmenu-row .tick { color: var(--blue); }
+
+/* shared modal */
+.modal-back { position: fixed; inset: 0; background: rgba(15,30,55,.45); display: grid; place-items: center; z-index: 8; padding: 16px; }
+.modal-card { width: 420px; max-width: 100%; margin: 0; max-height: 88vh; overflow-y: auto; }
+.btn.danger { background: var(--red); color: #fff; border-color: var(--red); }
+.btn.danger:hover { background: #9c2d21; color: #fff; }
+
+/* profile rows in settings */
+.prow { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid #eef1f6; }
+.prow:last-of-type { border: 0; }
+.prow .nm { flex: 1; }
+.prow .me { font-size: 11px; color: var(--blue); font-weight: 600; }
+
+/* update banner */
+.updbar { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 9;
+  display: flex; align-items: center; gap: 12px; background: var(--navy); color: #fff;
+  padding: 11px 16px; border-radius: 10px; box-shadow: 0 8px 28px rgba(15,30,55,.3); max-width: calc(100vw - 32px); }
+.updbar .btn.ghost { color: #b9c9e4; }
+.updbar .btn.ghost:hover { color: #fff; }
