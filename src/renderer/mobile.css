@@ -1,0 +1,92 @@
+/* Phone layout. Only loaded by the web build; the desktop app never sees it.
+   The sidebar becomes a bottom tab bar, and everything reflows to one column. */
+
+@media (max-width: 760px) {
+  :root { --radius: 12px; }
+  body { flex-direction: column; }
+
+  /* sidebar -> bottom tab bar */
+  .sidebar {
+    order: 2;
+    width: 100%;
+    flex-direction: row;
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+    position: sticky;
+    bottom: 0;
+    z-index: 4;
+    gap: 2px;
+  }
+  /* days-left is already a stat card on the dashboard, so the bar keeps only the tabs and the
+     offline toggle -- that way all eight tabs fit without sideways scrolling */
+  .brand, .side-foot small, .side-foot .count, .netpill .txt { display: none; }
+  #nav { flex-direction: row; gap: 0; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+  #nav::-webkit-scrollbar { display: none; }
+  #nav button .full { display: none; }
+  #nav button .short { display: inline; }
+  #nav button {
+    flex: 1;
+    min-width: 0;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px 2px;
+    font-size: 9.5px;
+    white-space: nowrap;
+    align-items: center;
+  }
+  #nav button i { font-size: 17px; width: auto; }
+  .side-foot {
+    flex: none;
+    margin: 0;
+    border: 0;
+    border-left: 1px solid #2c4a7c;
+    padding: 0 4px 0 8px;
+    display: flex;
+    align-items: center;
+  }
+  .netpill { margin: 0; padding: 8px 10px; font-size: 15px; }
+
+  main { order: 1; flex: 1; -webkit-overflow-scrolling: touch; }
+  .page { padding: 16px 14px 28px; }
+  h1 { font-size: 19px; }
+
+  /* stat tiles stay two-up so the dashboard is not a column of near-empty cards;
+     everything else goes single-column, since side-by-side panels are unreadable this narrow */
+  .grid, .g2, .g3 { grid-template-columns: 1fr !important; }
+  .grid.g4 { grid-template-columns: 1fr 1fr !important; } /* after .grid: same weight, later wins */
+  .grid[style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+  .g4 .card.stat { padding: 12px; }
+  .g4 .stat b { font-size: 21px; }
+  .g4 .stat span { font-size: 11.5px; }
+  .page-head { flex-direction: column; align-items: stretch; gap: 10px; }
+  .page-head > div[style*="width"] { width: auto !important; }
+
+  /* form rows: let fields wrap to full width instead of crushing each other */
+  .card > .row > input[type=text] { flex: 1 1 100%; }
+  .card > .row > input[type=date] { width: auto !important; flex: 1 1 140px; }
+  .row > .tabs { width: 100%; }
+
+  .card { padding: 14px 15px; }
+  .tabs { overflow-x: auto; }
+  .tabs button { padding: 9px 12px; white-space: nowrap; }
+
+  /* touch targets */
+  .btn { padding: 10px 15px; }
+  .btn.sm { padding: 7px 12px; }
+  .chip { padding: 6px 12px; }
+  .check input { width: 20px; height: 20px; }
+  input[type=text], input[type=date], input[type=number], select, textarea { padding: 11px; font-size: 16px; } /* 16px stops iOS zooming on focus */
+  textarea { min-height: 200px; }
+
+  .flash .w { font-size: 28px; }
+  .band { font-size: 32px; }
+  .skill-row { grid-template-columns: 74px 1fr 38px; }
+  table { font-size: 13px; }
+  th, td { padding: 7px 6px; }
+  .row { gap: 8px; }
+}
+
+/* very narrow phones */
+@media (max-width: 380px) {
+  #nav button { min-width: 50px; padding: 6px 6px; font-size: 9.5px; }
+  .page { padding: 14px 11px 24px; }
+}

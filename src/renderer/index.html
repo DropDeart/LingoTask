@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self' blob: https:; connect-src 'none'" />
+  <title>LingoTask</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand"><span class="logo">L</span><div><b>LingoTask</b><small>IELTS 6.5 hazırlık</small></div></div>
+    <nav id="nav"></nav>
+    <div class="side-foot" id="side-foot"></div>
+  </aside>
+  <main id="root"></main>
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="../shared/net.js"></script>
+  <script src="platform.js"></script>
+  <script src="util.js"></script>
+  <script src="data/awl.js"></script>
+  <script src="data/vocab.js"></script>
+  <script src="data/content.js"></script>
+  <script src="data/grammar.js"></script>
+  <script src="data/tests.js"></script>
+  <script src="data/wordlist.js"></script>
+  <script src="offline-check.js"></script>
+  <script src="api.js"></script>
+  <script src="app.js"></script>
+  <script src="views/dashboard.js"></script>
+  <script src="views/plan.js"></script>
+  <script src="views/vocab.js"></script>
+  <script src="views/dictionary.js"></script>
+  <script src="views/grammar.js"></script>
+  <script src="views/writing.js"></script>
+  <script src="views/speaking.js"></script>
+  <script src="views/tests.js"></script>
+  <script src="boot.js"></script>
+</body>
+</html>

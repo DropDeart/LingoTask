@@ -1,0 +1,85 @@
+name: Release
+
+# Desktop installers are built on their own operating systems: a .dmg cannot be produced from
+# Windows or Linux, and Linux targets need a Linux toolchain. Tagging a version fans the build
+# out to all three runners and collects the results into one GitHub Release.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: dist:win
+            artifacts: 'dist/*.exe'
+          - os: macos-latest
+            target: dist:mac
+            artifacts: 'dist/*.dmg'
+          - os: ubuntu-latest
+            target: dist:linux
+            artifacts: |
+              dist/*.AppImage
+              dist/*.deb
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build
+        run: npm run ${{ matrix.target }}
+        env:
+          # No Apple Developer certificate, so skip signing rather than failing the build.
+          # Unsigned builds need right-click > Open on first launch; the README says so.
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.os }}
+          path: ${{ matrix.artifacts }}
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*
+          generate_release_notes: true
+          body: |
+            ## Kurulum
+
+            | Sistem | Dosya | Not |
+            |---|---|---|
+            | Windows | `LingoTask-Setup-*.exe` | Kurulum sihirbazı. Yönetici izni istemez. |
+            | Windows | `LingoTask-Portable-*.exe` | Kurulum yok, çift tıkla çalışır. |
+            | macOS | `LingoTask-*.dmg` | Intel: `x64`, Apple Silicon: `arm64`. |
+            | Linux | `LingoTask-*.AppImage` | `chmod +x` sonrası çalıştır. |
+            | Linux | `LingoTask-*.deb` | `sudo apt install ./LingoTask-*.deb` |
+
+            İmzasız derlemeler: Windows SmartScreen'de **Daha fazla bilgi → Yine de çalıştır**,
+            macOS'ta uygulamaya **sağ tık → Aç**.
+
+            Telefon için kuruluma gerek yok — GitHub Pages adresini Chrome'da açıp
+            *Uygulamayı yükle* demen yeterli.

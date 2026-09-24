@@ -1,0 +1,6 @@
+# The release workflow builds on Linux and macOS runners, so normalise line endings in the repo
+# and let Windows check out CRLF locally.
+* text=auto eol=lf
+*.ps1 text eol=crlf
+*.png binary
+*.ico binary
