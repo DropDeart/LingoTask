@@ -1,7 +1,7 @@
 # LingoTask
 
 IELTS 6.5 hedefi için çalışma uygulaması. Sınav tarihi: **Ocak 2027**.
-Aynı kod iki yerde çalışır: **Windows masaüstü** (Electron) ve **telefon** (kurulabilir web uygulaması).
+Aynı kod üç yerde çalışır: **masaüstü** (Windows / macOS / Linux, Electron) ve **telefon** (kurulabilir web uygulaması).
 
 ## Çalıştırma
 
@@ -10,6 +10,32 @@ cd C:\Project\LingoTask
 npm start          # masaüstü
 npm run dev        # masaüstü + geliştirici araçları
 ```
+
+## Masaüstü kurulumu (dağıtım)
+
+```powershell
+npm run icons      # ilk seferde
+npm run dist:win   # dist/ içine kurulum sihirbazı + taşınabilir sürüm
+```
+
+| Dosya | Ne |
+|---|---|
+| `LingoTask-Setup-1.0.0-x64.exe` | NSIS kurulum sihirbazı — klasör seçtirir, masaüstü ve başlat menüsü kısayolu oluşturur, yönetici izni istemez |
+| `LingoTask-Portable-1.0.0.exe` | Kurulum yok, çift tıkla çalışır |
+
+Kaldırırken çalışma verisi silinmez, yeniden kurunca ilerleme yerinde durur.
+
+**Mac ve Linux:** `.dmg` bir Windows makinesinde üretilemez, Linux hedefleri de Linux araç zinciri ister. Bu yüzden `vX.Y.Z` etiketi push edildiğinde GitHub Actions üç işletim sisteminde paralel derleyip tek bir Release'e koyar — bkz. `.github/workflows/release.yml`.
+
+```bash
+git tag v1.0.0 && git push origin v1.0.0
+```
+
+Derlemeler imzasız: Windows SmartScreen'de **Daha fazla bilgi → Yine de çalıştır**, macOS'ta **sağ tık → Aç** gerekir. İmzalamak Apple Developer üyeliği ve Windows kod imzalama sertifikası ister.
+
+### Platform farkları
+
+Seslendirme dışında her şey üç sistemde aynı. Ses Windows'ta ana süreçte SAPI ile üretilir; macOS ve Linux'ta SAPI olmadığı için tarayıcı motoruna düşer — o platformlarda Chromium işletim sistemiyle düzgün konuşur, Windows'ta konuşamadığı için bu ayrım var. Linux'ta ses için `speech-dispatcher` kurulu olmalıdır.
 
 ## Telefona kurmak
 
