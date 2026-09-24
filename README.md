@@ -12,9 +12,9 @@ Chrome'da aç → menü → *Uygulamayı yükle*. Kurulduktan sonra internetsiz 
 
 | Sistem | Dosya |
 |---|---|
-| Windows | `LingoTask-Setup-1.0.0-x64.exe` (kurulum sihirbazı) · `LingoTask-Portable-1.0.0.exe` (kurulumsuz) |
-| macOS | `LingoTask-1.0.0-arm64.dmg` (Apple Silicon) · `LingoTask-1.0.0-x64.dmg` (Intel) |
-| Linux | `LingoTask-1.0.0-x86_64.AppImage` · `LingoTask-1.0.0-amd64.deb` |
+| Windows | `LingoTask-Setup-*.exe` (tek tıkla kurar) · `LingoTask-Portable-*.exe` (kurulumsuz) |
+| macOS | `LingoTask-*-arm64.dmg` (Apple Silicon) · `LingoTask-*-x64.dmg` (Intel) |
+| Linux | `LingoTask-*-x86_64.AppImage` · `LingoTask-*-amd64.deb` |
 
 Derlemeler imzasız: Windows SmartScreen'de **Daha fazla bilgi → Yine de çalıştır**, macOS'ta uygulamaya **sağ tık → Aç**.
 
@@ -149,6 +149,14 @@ Uygulamada hesap ya da sunucu yok, ama bir cihazı birden fazla kişi kullanabil
 Cihazda birden fazla profil varsa açılışta **Kim çalışıyor?** ekranı gelir; her satırda o profilin kelime sayısı ve sınava kalan günü görünür. Tek profil varsa doğrudan panele girilir. Çalışırken profil değiştirmek için sol üstteki logoya tıkla; telefonda logo gizli olduğu için aynı kontroller **Ayarlar → Profiller** altında.
 
 Yeni bir profil ilk açılışta adım adım kurulum sihirbazından geçer: isim, sınav tarihi, hedef band, günlük kelime hedefi ve ses testi. Çalışma planı bu cevaplara göre kurulur.
+
+### Profil parolası
+
+Bir profile parola koyabilirsin (**Ayarlar → Profiller → Parola koy**). Parola bir kontrol değil, anahtardır: profilin tüm verisi PBKDF2 ile türetilen anahtarla AES-GCM kullanılarak şifrelenir. Dosyayı açan biri yalnızca `enc / salt / iv / ct` alanlarını görür — kelimeler, yazılar ve sınav tarihi dahil hiçbir şey okunamaz.
+
+Bunun bedeli var ve gizlenmiyor: **parolayı unutursan o profilin verisi kurtarılamaz.** Sıfırlama yok, çünkü parolayı sıfırlayabilen bir sistem şifrelemeyi de çözebilirdi. Parola hiçbir yerde saklanmaz; türetilen anahtar yalnızca profil açıkken bellekte durur.
+
+Kilitli profil açılışta parola ekranı gösterir ve profil listesinde 🔒 ile işaretlenir. Şifreleme `crypto.subtle` gerektirdiği için güvenli bağlantı şarttır: masaüstünde ve `https` üzerinden çalışır, telefonu düz `http://192.168.x.x` ile açtıysan seçenek kapalı görünür.
 
 Her profilin kendi sınav tarihi, hedef bandı, kelimeleri, yazıları, gramer sonuçları ve çalışma planı olur. Aralarında hiçbir şey paylaşılmaz — plan bile o profilin *kendi* ilk açılış gününden kendi sınav tarihine göre bölünür.
 

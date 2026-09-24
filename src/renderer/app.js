@@ -33,8 +33,7 @@ const App = {
     Api.init();
     Api.onChange(() => this.renderFoot());
     this.profiles = await Platform.loadProfiles();
-    await this.loadActive();
-    // more than one profile on the device -> ask who is studying before showing anything
+    this.loadResult = await this.loadActive();
     $('#nav').innerHTML = NAV.map(([id, label, icon, short]) => `<button data-nav="${id}"><i>${icon}</i><span class="full">${label}</span><span class="short">${short}</span></button>`).join('');
     $('#nav').addEventListener('click', (e) => {
       const b = e.target.closest('[data-nav]');
@@ -49,17 +48,37 @@ const App = {
   // more than one profile. A profile that has not been through setup goes there first.
   firstView() {
     if (this.profiles.list.length > 1) return 'picker';
+    if (this.loadResult === 'locked') return 'unlock';
     return this.state.onboarded ? 'dashboard' : 'setup';
   },
   async enterProfile(id) {
     if (id !== this.profiles.active) {
+      Vault.clear(); // never carry one profile's key into another
       this.profiles.active = id;
       await Platform.saveProfiles(this.profiles);
-      await this.loadActive();
+      const r = await this.loadActive();
       this.resetViews();
+      if (r === 'locked') {
+        this.renderProfile();
+        return this.go('unlock');
+      }
     }
     this.renderProfile();
     this.go(this.state.onboarded ? 'dashboard' : 'setup');
+  },
+
+  // ---- profile password ----
+  async setProfilePassword(password) {
+    await Vault.setPassword(password);
+    await this.saveNow(); // rewrites the file as ciphertext
+    this.profile().locked = true;
+    await Platform.saveProfiles(this.profiles);
+  },
+  async removeProfilePassword() {
+    Vault.clear();
+    delete this.profile().locked;
+    await Platform.saveProfiles(this.profiles);
+    await this.saveNow(); // rewrites it in the clear
   },
 
   // ---- profiles ----
@@ -68,19 +87,42 @@ const App = {
   profile() {
     return this.profiles.list.find((p) => p.id === this.profiles.active) || this.profiles.list[0];
   },
+  // Returns 'locked' when the profile is password-protected and the key is not held yet; the
+  // caller then routes to the unlock gate instead of showing a half-loaded app.
   async loadActive() {
     const saved = await Platform.loadState(this.profiles.active);
+    if (Vault.isEncrypted(saved)) {
+      if (!Vault.key) {
+        this.pendingBlob = saved;
+        this.state = null; // nothing readable until the password arrives
+        return 'locked';
+      }
+      this.state = this.migrate(await Vault.open(saved));
+      return 'ok';
+    }
     this.state = this.migrate(saved);
     if (!saved) await this.saveNow();
+    return 'ok';
+  },
+
+  // Applies the password the unlock gate collected.
+  async unlockActive(password) {
+    const state = await Vault.unlock(this.pendingBlob, password); // throws 'wrong-password'
+    this.state = this.migrate(state);
+    this.pendingBlob = null;
+    return true;
   },
   async switchProfile(id) {
     if (id === this.profiles.active) return;
     await this.saveNow(); // flush any debounced edit before swapping the state out
+    Vault.clear();
     this.profiles.active = id;
     await Platform.saveProfiles(this.profiles);
-    await this.loadActive();
+    const r = await this.loadActive();
     this.resetViews();
     Views.picker.cache = null; // summaries are stale once a profile has been studied
+    if (r === 'locked') return this.go('unlock');
+    this.renderProfile();
     this.go(this.state.onboarded ? 'dashboard' : 'setup');
     this.toast(`${this.profile().name} profiline geçildi`);
   },
@@ -206,12 +248,13 @@ const App = {
     return this.METRICS[name]?.(this.state) ?? 0;
   },
 
-  saveNow() {
-    return Platform.saveState(this.profiles.active, this.state);
+  async saveNow() {
+    const payload = Vault.key ? await Vault.seal(this.state) : this.state;
+    return Platform.saveState(this.profiles.active, payload);
   },
   save: debounce(() => App.saveNow(), 400),
 
-  GATES: ["picker", "setup"],
+  GATES: ['picker', 'setup', 'unlock'],
 
   go(view, params = {}) {
     Audio$.stop();
@@ -232,6 +275,8 @@ const App = {
   },
 
   renderFoot() {
+    // A locked profile has no decrypted state yet, and the gate views hide the sidebar anyway.
+    if (!this.state) return;
     const days = daysBetween(today(), this.state.settings.examDate);
     const net = Api.statusLabel();
     this.renderProfile();

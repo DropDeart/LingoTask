@@ -85,6 +85,44 @@ Views.dashboard = {
     );
   },
 
+  // Setting a password re-encrypts the profile under it. There is no recovery path by design:
+  // a password that could be reset would not be protecting anything.
+  setPassword() {
+    Dialog.open(
+      `<p class="small muted" style="margin-top:0">Bu profilin tüm verisi bu parolayla şifrelenecek. Parolayı unutursan <b>kelimelerin, yazıların ve ilerlemen kurtarılamaz</b> — sıfırlama yok, çünkü parolayı sıfırlayabilen bir sistem şifrelemeyi de çözebilirdi.</p>
+       <label class="f">Parola</label><input type="password" id="pw1" autocomplete="new-password">
+       <label class="f" style="margin-top:10px">Parola (tekrar)</label><input type="password" id="pw2" autocomplete="new-password">
+       <div class="small" id="pw-err" style="color:var(--red);min-height:18px;margin-top:6px"></div>`,
+      '<button class="btn" id="pw-no">Vazgeç</button><button class="btn primary" id="pw-yes">Parolayı koy</button>',
+      `“${App.profile().name}” için parola`,
+    );
+    $('#pw1').focus();
+    $('#pw-no').onclick = () => Dialog.close();
+    $('#pw-yes').onclick = async () => {
+      const a = $('#pw1').value;
+      const b = $('#pw2').value;
+      if (a.length < 4) return ($('#pw-err').textContent = 'Parola en az 4 karakter olmalı.');
+      if (a !== b) return ($('#pw-err').textContent = 'İki parola aynı değil.');
+      $('#pw-yes').disabled = true;
+      $('#pw-err').textContent = 'şifreleniyor…';
+      await App.setProfilePassword(a);
+      Dialog.close();
+      App.toast('Parola kondu — bu profil artık şifreli');
+    };
+  },
+
+  removePassword() {
+    Dialog.confirm(
+      'Parola kaldırılsın mı?',
+      'Profilin verisi şifresiz kaydedilecek ve açılışta parola sorulmayacak.',
+      'Kaldır',
+      async () => {
+        await App.removeProfilePassword();
+        App.toast('Parola kaldırıldı');
+      },
+    );
+  },
+
   async settings() {
     const s = App.state.settings;
     const root = $('#root');
@@ -96,7 +134,11 @@ Views.dashboard = {
           <h3 style="margin-top:0">Profiller</h3>
           <div class="small muted" style="margin-bottom:6px">Her profilin kendi sınav tarihi, kelimeleri ve ilerlemesi olur. Aralarında hiçbir şey paylaşılmaz.</div>
           <div id="s-profiles"></div>
-          <button class="btn sm" id="s-pnew" style="margin-top:8px">+ Yeni profil</button>
+          <div class="row" style="margin-top:8px"><button class="btn sm" id="s-pnew">+ Yeni profil</button>
+            <button class="btn sm" id="s-pass">${App.profile().locked ? '🔒 Parolayı kaldır' : 'Parola koy'}</button></div>
+          <div class="small muted" style="margin-top:6px">${Vault.available()
+            ? 'Parola koyarsan bu profilin verisi şifrelenir; parolayı bilmeyen dosyayı açsa bile okuyamaz.'
+            : '<span style="color:var(--amber)">Parola koruması bu adreste kullanılamıyor — tarayıcı şifrelemeyi yalnızca güvenli bağlantıda (https veya localhost) veriyor.</span>'}</div>
           <h3>Bu profilin ayarları</h3>
           <label class="f">Sınav tarihi</label><input type="date" id="s-exam" value="${s.examDate}">
           <label class="f" style="margin-top:12px">Hedef band</label><input type="number" id="s-target" min="4" max="9" step="0.5" value="${s.target}">
@@ -152,6 +194,11 @@ Views.dashboard = {
     $('#s-pnew').onclick = () => {
       $('#dlg').remove();
       App.promptNewProfile();
+    };
+    $('#s-pass').disabled = !Vault.available();
+    $('#s-pass').onclick = () => {
+      $('#dlg').remove();
+      App.profile().locked ? this.removePassword() : this.setPassword();
     };
 
     $('#s-cancel').onclick = () => { Audio$.stop(); $('#dlg').remove(); };

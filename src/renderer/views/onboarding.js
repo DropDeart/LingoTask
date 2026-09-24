@@ -16,8 +16,8 @@ Views.picker = {
         <p class="sub">Her profilin kendi sınav tarihi, kelimeleri ve ilerlemesi var.</p>
         <div class="gate-list">
           ${list.map((p) => `<button class="gate-profile" data-pick="${p.id}">
-            <span class="av">${esc(p.name.slice(0, 1).toUpperCase())}</span>
-            <span class="who"><b>${esc(p.name)}</b><small>${esc(this.summary(p.id))}</small></span>
+            <span class="av">${p.locked ? '🔒' : esc(p.name.slice(0, 1).toUpperCase())}</span>
+            <span class="who"><b>${esc(p.name)}</b><small>${p.locked ? 'parola korumalı' : esc(this.summary(p.id))}</small></span>
           </button>`).join('')}
           <button class="gate-profile add" id="gate-new"><span class="av">+</span><span class="who"><b>Yeni profil</b><small>Sıfırdan başla</small></span></button>
         </div>
@@ -39,7 +39,10 @@ Views.picker = {
     if (this.cache) return;
     // fill the summaries once the saved files come back
     this.cache = {};
-    for (const p of App.profiles.list) this.cache[p.id] = await Platform.loadState(p.id);
+    for (const p of App.profiles.list) {
+      if (p.locked) continue; // encrypted: there is nothing readable to summarise
+      this.cache[p.id] = await Platform.loadState(p.id);
+    }
     if (App.current === 'picker') App.render();
   },
 };
@@ -152,5 +155,50 @@ Views.setup = {
     App.renderProfile();
     App.go('dashboard');
     App.toast(`Hoş geldin ${d.name} — planın hazır`);
+  },
+};
+
+// Unlock gate for a password-protected profile. The password is not checked against anything
+// stored: it either derives the key that decrypts the file, or it does not.
+Views.unlock = {
+  error: '',
+  render() {
+    const p = App.profile();
+    return `<div class="gate">
+      <div class="gate-card">
+        <div class="gate-logo">🔒</div>
+        <h1>${esc(p.name)}</h1>
+        <p class="sub">Bu profil parola ile korunuyor.</p>
+        <div class="w-field"><input type="password" id="u-pass" placeholder="Parola" autocomplete="current-password"></div>
+        <div class="small" id="u-error" style="color:var(--red);min-height:18px">${esc(this.error)}</div>
+        <div class="row" style="justify-content:space-between;margin-top:10px">
+          ${App.profiles.list.length > 1 ? '<button class="btn ghost" id="u-back">← Profiller</button>' : '<span></span>'}
+          <button class="btn primary" id="u-go">Aç</button>
+        </div>
+      </div></div>`;
+  },
+  mount(root) {
+    this.error = '';
+    const input = $('#u-pass', root);
+    input.focus();
+    const go = async () => {
+      const pass = input.value;
+      if (!pass) return;
+      $('#u-go').disabled = true;
+      $('#u-error').textContent = 'açılıyor…';
+      try {
+        await App.unlockActive(pass);
+        App.renderProfile();
+        App.go(App.state.onboarded ? 'dashboard' : 'setup');
+      } catch {
+        this.error = 'Parola yanlış.';
+        $('#u-error').textContent = this.error;
+        $('#u-go').disabled = false;
+        input.select();
+      }
+    };
+    $('#u-go').onclick = go;
+    input.addEventListener('keydown', (e) => e.key === 'Enter' && go());
+    $('#u-back', root)?.addEventListener('click', () => { Vault.clear(); App.go('picker'); });
   },
 };
