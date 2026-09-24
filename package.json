@@ -110,9 +110,8 @@
       "category": "Education",
       "synopsis": "IELTS study app",
       "artifactName": "LingoTask-${version}-${arch}.${ext}",
-      "desktopName": "lingotask.desktop",
       "maintainer": "Furkan Recep Cinar <DropDeart@users.noreply.github.com>",
-      "description": "Vocabulary, grammar, reading, listening, writing and speaking practice for IELTS, with an offline mode."
+      "syncDesktopName": true
     },
     "asarUnpack": [
       "src/main/tts.ps1"
@@ -127,5 +126,6 @@
   },
   "dependencies": {
     "electron-updater": "^6.8.9"
-  }
+  },
+  "desktopName": "lingotask.desktop"
 }
