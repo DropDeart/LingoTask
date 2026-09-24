@@ -57,8 +57,10 @@ adb reverse tcp:8080 tcp:8080
 Telefonun Chrome'unda `http://localhost:8080` → menü → **Uygulamayı yükle**. Kurulumdan sonra bütün dosyalar önbellekte kalır; bilgisayar kapalıyken ve internet yokken de çalışır.
 
 **2) GitHub Pages** — kalıcı adres, güncellemesi kolay.
- dalına her push'ta  PWA'yı derleyip yayınlar. İlk seferde **Settings → Pages → Source: GitHub Actions** seçilmelidir; aksi halde iş akışı  adımında durur. Sonrasında adres:
-https://dropdeart.github.io/LingoTask/
+
+`main` dalına her push'ta `.github/workflows/pages.yml` PWA'yı derleyip yayınlar. İlk seferde bir kez **Settings → Pages → Source: GitHub Actions** seçilmelidir; aksi halde iş akışı `configure-pages` adımında durur (varsayılan workflow token'ı Pages sitesini kendisi oluşturamıyor).
+
+Sonrasında telefondan açılacak adres: <https://dropdeart.github.io/LingoTask/>
 
 ### Gerçek APK?
 
