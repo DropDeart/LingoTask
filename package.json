@@ -20,7 +20,8 @@
   },
   "productName": "LingoTask",
   "author": {
-    "name": "Furkan Recep Cinar"
+    "name": "Furkan Recep Cinar",
+    "email": "DropDeart@users.noreply.github.com"
   },
   "license": "MIT",
   "build": {
@@ -107,8 +108,11 @@
       ],
       "icon": "build/icon-512.png",
       "category": "Education",
-      "synopsis": "IELTS calisma uygulamasi",
-      "artifactName": "LingoTask-${version}-${arch}.${ext}"
+      "synopsis": "IELTS study app",
+      "artifactName": "LingoTask-${version}-${arch}.${ext}",
+      "desktopName": "lingotask.desktop",
+      "maintainer": "Furkan Recep Cinar <DropDeart@users.noreply.github.com>",
+      "description": "Vocabulary, grammar, reading, listening, writing and speaking practice for IELTS, with an offline mode."
     },
     "asarUnpack": [
       "src/main/tts.ps1"
