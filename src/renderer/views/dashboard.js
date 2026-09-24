@@ -90,9 +90,9 @@ Views.dashboard = {
     const root = $('#root');
     root.insertAdjacentHTML(
       'beforeend',
-      `<div id="dlg" style="position:fixed;inset:0;background:rgba(15,30,55,.45);display:grid;place-items:center;z-index:5">
-        <div class="card" style="width:460px;margin:0;max-height:88vh;overflow-y:auto">
-          <h2>Ayarlar</h2>
+      `<div id="dlg" class="modal-back"><div class="card modal-card">
+        <div class="modal-head"><h2>Ayarlar</h2></div>
+        <div class="modal-body">
           <h3 style="margin-top:0">Profiller</h3>
           <div class="small muted" style="margin-bottom:6px">Her profilin kendi sınav tarihi, kelimeleri ve ilerlemesi olur. Aralarında hiçbir şey paylaşılmaz.</div>
           <div id="s-profiles"></div>
@@ -114,8 +114,9 @@ Views.dashboard = {
           <label class="f" style="margin-top:12px">Okuma hızı</label>
           <select id="s-rate">${[[-3, 'Çok yavaş'], [-2, 'Yavaş'], [-1, 'Normal (önerilen)'], [0, 'Hızlı'], [2, 'Çok hızlı']].map(([v, l]) => `<option value="${v}" ${s.speechRate === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
           <div class="row" style="margin-top:10px"><button class="btn sm" id="s-test">🔊 Dene</button><span class="muted small" id="s-teststate"></span></div>
-          <div class="row" style="margin-top:18px;justify-content:flex-end"><button class="btn" id="s-cancel">Vazgeç</button><button class="btn primary" id="s-save">Kaydet</button></div>
-        </div></div>`,
+        </div>
+        <div class="modal-foot"><button class="btn" id="s-cancel">Vazgeç</button><button class="btn primary" id="s-save">Kaydet</button></div>
+      </div></div>`,
     );
     const drawProfiles = () => {
       const { active, list } = App.profiles;

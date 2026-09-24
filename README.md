@@ -35,7 +35,7 @@ npm run dist:win   # dist/ içine kurulum sihirbazı + taşınabilir sürüm
 
 | Dosya | Ne |
 |---|---|
-| `LingoTask-Setup-1.0.0-x64.exe` | NSIS kurulum sihirbazı — klasör seçtirir, masaüstü ve başlat menüsü kısayolu oluşturur, yönetici izni istemez |
+| `LingoTask-Setup-1.0.0-x64.exe` | Tek tıkla kurar ve açar — soru sormaz, yönetici izni istemez, masaüstü ve başlat menüsü kısayolu oluşturur |
 | `LingoTask-Portable-1.0.0.exe` | Kurulum yok, çift tıkla çalışır |
 
 Kaldırırken çalışma verisi silinmez, yeniden kurunca ilerleme yerinde durur.
@@ -144,7 +144,11 @@ Veri masaüstünde `%APPDATA%\LingoTask\lingotask.json` içinde tutulur; geçici
 
 ## Profiller
 
-Uygulamada hesap ya da sunucu yok, ama bir cihazı birden fazla kişi kullanabilir. Sol üstteki logoya tıklayınca profil menüsü açılır; telefonda logo gizli olduğu için aynı kontroller **Ayarlar → Profiller** altında.
+Uygulamada hesap ya da sunucu yok, ama bir cihazı birden fazla kişi kullanabilir. Kurulum sırasında "kimin için" diye sorulmaz — kurulum tek tıkla biter, kim olduğun uygulamanın içinde seçilir.
+
+Cihazda birden fazla profil varsa açılışta **Kim çalışıyor?** ekranı gelir; her satırda o profilin kelime sayısı ve sınava kalan günü görünür. Tek profil varsa doğrudan panele girilir. Çalışırken profil değiştirmek için sol üstteki logoya tıkla; telefonda logo gizli olduğu için aynı kontroller **Ayarlar → Profiller** altında.
+
+Yeni bir profil ilk açılışta adım adım kurulum sihirbazından geçer: isim, sınav tarihi, hedef band, günlük kelime hedefi ve ses testi. Çalışma planı bu cevaplara göre kurulur.
 
 Her profilin kendi sınav tarihi, hedef bandı, kelimeleri, yazıları, gramer sonuçları ve çalışma planı olur. Aralarında hiçbir şey paylaşılmaz — plan bile o profilin *kendi* ilk açılış gününden kendi sınav tarihine göre bölünür.
 

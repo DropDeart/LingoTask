@@ -34,6 +34,7 @@ const App = {
     Api.onChange(() => this.renderFoot());
     this.profiles = await Platform.loadProfiles();
     await this.loadActive();
+    // more than one profile on the device -> ask who is studying before showing anything
     $('#nav').innerHTML = NAV.map(([id, label, icon, short]) => `<button data-nav="${id}"><i>${icon}</i><span class="full">${label}</span><span class="short">${short}</span></button>`).join('');
     $('#nav').addEventListener('click', (e) => {
       const b = e.target.closest('[data-nav]');
@@ -41,7 +42,24 @@ const App = {
     });
     $('#brand').onclick = () => this.openProfileMenu();
     this.renderProfile();
-    this.go('dashboard');
+    this.go(this.firstView());
+  },
+
+  // Who is studying is a question for the app, not the installer: ask it when the device holds
+  // more than one profile. A profile that has not been through setup goes there first.
+  firstView() {
+    if (this.profiles.list.length > 1) return 'picker';
+    return this.state.onboarded ? 'dashboard' : 'setup';
+  },
+  async enterProfile(id) {
+    if (id !== this.profiles.active) {
+      this.profiles.active = id;
+      await Platform.saveProfiles(this.profiles);
+      await this.loadActive();
+      this.resetViews();
+    }
+    this.renderProfile();
+    this.go(this.state.onboarded ? 'dashboard' : 'setup');
   },
 
   // ---- profiles ----
@@ -62,7 +80,8 @@ const App = {
     await Platform.saveProfiles(this.profiles);
     await this.loadActive();
     this.resetViews();
-    this.go('dashboard');
+    Views.picker.cache = null; // summaries are stale once a profile has been studied
+    this.go(this.state.onboarded ? 'dashboard' : 'setup');
     this.toast(`${this.profile().name} profiline geçildi`);
   },
   async createProfile(name) {
@@ -73,8 +92,9 @@ const App = {
     this.state = this.migrate(null);
     await this.saveNow();
     this.resetViews();
-    this.go('dashboard');
-    this.toast(`“${name}” profili oluşturuldu`);
+    Views.picker.cache = null;
+    this.renderProfile();
+    this.go('setup'); // a brand-new profile has no exam date of its own yet
   },
   async renameProfile(id, name) {
     const p = this.profiles.list.find((x) => x.id === id);
@@ -91,8 +111,11 @@ const App = {
       await Platform.saveProfiles(this.profiles);
       await this.loadActive();
       this.resetViews();
-      this.go('dashboard');
+      Views.picker.cache = null;
+      this.renderProfile();
+      this.go(this.state.onboarded ? 'dashboard' : 'setup');
     } else await Platform.saveProfiles(this.profiles);
+    Views.picker.cache = null;
   },
   // The switcher lives on the brand so it is reachable from every view. On the phone the brand is
   // hidden, so Settings carries the same controls.
@@ -188,8 +211,11 @@ const App = {
   },
   save: debounce(() => App.saveNow(), 400),
 
+  GATES: ["picker", "setup"],
+
   go(view, params = {}) {
     Audio$.stop();
+    document.body.classList.toggle("gated", this.GATES.includes(view));
     this.current = view;
     this.params = params;
     $$('#nav button').forEach((b) => b.classList.toggle('active', b.dataset.nav === view));

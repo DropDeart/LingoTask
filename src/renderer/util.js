@@ -112,18 +112,28 @@ const Dialog = {
   close() {
     $('#modal')?.remove();
   },
-  open(html) {
+  // Header and footer stay put while only the body scrolls. A dialog that simply capped its
+  // height and scrolled as a whole pushed its own buttons off the bottom of the screen as soon
+  // as the content grew, which made them look broken.
+  open(body, foot, title) {
     this.close();
     document.body.insertAdjacentHTML(
       'beforeend',
-      `<div id="modal" class="modal-back"><div class="card modal-card">${html}</div></div>`,
+      `<div id="modal" class="modal-back"><div class="card modal-card">
+        ${title ? `<div class="modal-head"><h2>${esc(title)}</h2></div>` : ''}
+        <div class="modal-body">${body}</div>
+        ${foot ? `<div class="modal-foot">${foot}</div>` : ''}
+      </div></div>`,
     );
     $('#modal').addEventListener('click', (e) => e.target.id === 'modal' && this.close());
   },
   prompt(title, note, label, value, onOk) {
-    this.open(`<h2>${esc(title)}</h2>${note ? `<p class="small muted">${esc(note)}</p>` : ''}
-      <label class="f">${esc(label)}</label><input type="text" id="dlg-input" value="${esc(value)}" maxlength="24">
-      <div class="row" style="margin-top:18px;justify-content:flex-end"><button class="btn" id="dlg-no">Vazgeç</button><button class="btn primary" id="dlg-yes">Tamam</button></div>`);
+    this.open(
+      `${note ? `<p class="small muted" style="margin-top:0">${esc(note)}</p>` : ''}
+       <label class="f">${esc(label)}</label><input type="text" id="dlg-input" value="${esc(value)}" maxlength="24">`,
+      '<button class="btn" id="dlg-no">Vazgeç</button><button class="btn primary" id="dlg-yes">Tamam</button>',
+      title,
+    );
     const input = $('#dlg-input');
     input.focus();
     input.select();
@@ -133,8 +143,11 @@ const Dialog = {
     input.addEventListener('keydown', (e) => e.key === 'Enter' && ok());
   },
   confirm(title, note, okLabel, onOk) {
-    this.open(`<h2>${esc(title)}</h2><p class="small muted">${esc(note)}</p>
-      <div class="row" style="margin-top:18px;justify-content:flex-end"><button class="btn" id="dlg-no">Vazgeç</button><button class="btn danger" id="dlg-yes">${esc(okLabel)}</button></div>`);
+    this.open(
+      `<p class="small muted" style="margin:0">${esc(note)}</p>`,
+      `<button class="btn" id="dlg-no">Vazgeç</button><button class="btn danger" id="dlg-yes">${esc(okLabel)}</button>`,
+      title,
+    );
     $('#dlg-yes').onclick = () => { this.close(); onOk(); };
     $('#dlg-no').onclick = () => this.close();
   },
