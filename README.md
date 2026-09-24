@@ -3,6 +3,21 @@
 IELTS 6.5 hedefi için çalışma uygulaması. Sınav tarihi: **Ocak 2027**.
 Aynı kod üç yerde çalışır: **masaüstü** (Windows / macOS / Linux, Electron) ve **telefon** (kurulabilir web uygulaması).
 
+## İndir
+
+**Telefon —** kurulum dosyası gerekmez: <https://dropdeart.github.io/LingoTask/>
+Chrome'da aç → menü → *Uygulamayı yükle*. Kurulduktan sonra internetsiz çalışır.
+
+**Masaüstü —** [son sürüm](https://github.com/DropDeart/LingoTask/releases/latest)
+
+| Sistem | Dosya |
+|---|---|
+| Windows | `LingoTask-Setup-1.0.0-x64.exe` (kurulum sihirbazı) · `LingoTask-Portable-1.0.0.exe` (kurulumsuz) |
+| macOS | `LingoTask-1.0.0-arm64.dmg` (Apple Silicon) · `LingoTask-1.0.0-x64.dmg` (Intel) |
+| Linux | `LingoTask-1.0.0-x86_64.AppImage` · `LingoTask-1.0.0-amd64.deb` |
+
+Derlemeler imzasız: Windows SmartScreen'de **Daha fazla bilgi → Yine de çalıştır**, macOS'ta uygulamaya **sağ tık → Aç**.
+
 ## Çalıştırma
 
 ```powershell
